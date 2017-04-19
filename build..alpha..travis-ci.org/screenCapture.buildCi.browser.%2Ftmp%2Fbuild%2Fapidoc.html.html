@@ -56,6 +56,15 @@
 
         <li>
 
+            <a class="apidocElementLiA" href="#apidoc.element.http-master.http-master">
+            function <span class="apidocSignatureSpan"></span>http-master
+            <span class="apidocSignatureSpan">()</span>
+            </a>
+
+        </li>
+
+        <li>
+
             <a class="apidocElementLiA" href="#apidoc.element.http-master.CertScanner">
             function <span class="apidocSignatureSpan">http-master.</span>CertScanner
             <span class="apidocSignatureSpan">(sslDirectory, options)</span>
@@ -373,6 +382,50 @@
 
 <div class="apidocSectionDiv">
 <h1><a href="#apidoc.module.http-master" id="apidoc.module.http-master">module http-master</a></h1>
+
+
+    <h2>
+        <a href="#apidoc.element.http-master.http-master" id="apidoc.element.http-master.http-master">
+        function <span class="apidocSignatureSpan"></span>http-master
+        <span class="apidocSignatureSpan">()</span>
+        </a>
+    </h2>
+    <ul>
+    <li>description and source-code<pre class="apidocCodePre">function HttpMaster() {
+  var workers = this.workers = [];
+  this.tlsSessionStore = {};
+
+  // hacky way to ensure that our cluster is a locally loaded one
+  // use this until https://github.com/joyent/node/pull/3367 is merged
+  var oldCluster = require.cache[require.resolve('cluster')];
+  delete require.cache[require.resolve('cluster')];
+  var cluster = this.cluster = require('cluster');
+  require.cache[require.resolve('cluster')] = oldCluster;
+
+  this.cluster.setupMaster({
+    exec: path.join(__dirname, 'worker.js'),
+    args: []
+  });
+
+  this.autoRestartWorkers = true;
+
+  var self = this;
+  cluster.on('exit', function(worker, code, signal) {
+    if (!self.autoRestartWorkers) {
+      return;
+    }
+    self.logError("Worker " + worker.id + " failed with code " + code + "/" + signal + " ... starting replacement");
+    workers[worker.id - 1] = undefined;
+    var newWorker = initWorker.call(self, function() {
+      self.logNotice("Worker " + newWorker.id + " started in place of worker " + worker.id);
+      workers[newWorker.id - 1] = newWorker;
+    });
+  });
+
+}</pre></li>
+    <li>example usage<pre class="apidocCodePre">n/a</pre></li>
+    </ul>
+
 
 
     <h2>
